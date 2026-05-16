@@ -1,23 +1,59 @@
 import express from 'express';
+import { celebrate, Segments } from 'celebrate';
 
 import {
   getAllNotes,
   getNoteById,
   createNote,
-  deleteNote,
   updateNote,
-} from '../controllers/notesController.js';
+  deleteNote,
+} from '../controllers/notesControllers.js';
+
+import {
+  getAllNotesSchema,
+  noteIdSchema,
+  createNoteSchema,
+  updateNoteSchema,
+} from '../validations/notesValidation.js';
 
 const router = express.Router();
 
-router.get('/notes', getAllNotes);
+router.get(
+  '/',
+  celebrate({
+    [Segments.QUERY]: getAllNotesSchema,
+  }),
+  getAllNotes,
+);
 
-router.get('/notes/:noteId', getNoteById);
+router.get(
+  '/:noteId',
+  celebrate({
+    [Segments.PARAMS]: noteIdSchema,
+  }),
+  getNoteById,
+);
 
-router.post('/notes', createNote);
+router.post(
+  '/',
+  celebrate({
+    [Segments.BODY]: createNoteSchema,
+  }),
+  createNote,
+);
 
-router.delete('/notes/:noteId', deleteNote);
+router.patch(
+  '/:noteId',
+  celebrate(updateNoteSchema),
+  updateNote,
+);
 
-router.patch('/notes/:noteId', updateNote);
+router.delete(
+  '/:noteId',
+  celebrate({
+    [Segments.PARAMS]: noteIdSchema,
+  }),
+  deleteNote,
+);
 
 export default router;
