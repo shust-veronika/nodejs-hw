@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { errors } from 'celebrate';
 
-import notesRouter from './src/routes/notesRoutes.js';
+import notesRouter from './routes/notesRoutes.js';
 
 dotenv.config();
 
