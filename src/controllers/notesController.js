@@ -15,23 +15,24 @@ export const getAllNotes = async (req, res) => {
     filter.tag = tag;
   }
 
+  // нечутливий до регістру пошук без $text
   if (search) {
-    filter.$text = {
-      $search: search,
-    };
+    filter.$or = [
+      { title: { $regex: search, $options: 'i' } },
+      { content: { $regex: search, $options: 'i' } },
+    ];
   }
 
   const skip = (page - 1) * perPage;
 
-  const totalNotes = await Note.countDocuments(filter);
-
-  const notes = await Note.find(filter)
-    .skip(skip)
-    .limit(perPage);
+  const [totalNotes, notes] = await Promise.all([
+    Note.countDocuments(filter),
+    Note.find(filter).skip(skip).limit(perPage),
+  ]);
 
   const totalPages = Math.ceil(totalNotes / perPage);
 
-  res.json({
+  res.status(200).json({
     page: Number(page),
     perPage: Number(perPage),
     totalNotes,
@@ -49,7 +50,7 @@ export const getNoteById = async (req, res, next) => {
     return next(createHttpError(404, 'Note not found'));
   }
 
-  res.json(note);
+  res.status(200).json(note);
 };
 
 export const createNote = async (req, res) => {
@@ -65,7 +66,7 @@ export const updateNote = async (req, res, next) => {
     noteId,
     req.body,
     {
-      new: true,
+      returnDocument: 'after',
     },
   );
 
@@ -73,7 +74,7 @@ export const updateNote = async (req, res, next) => {
     return next(createHttpError(404, 'Note not found'));
   }
 
-  res.json(note);
+  res.status(200).json(note);
 };
 
 export const deleteNote = async (req, res, next) => {
@@ -85,5 +86,5 @@ export const deleteNote = async (req, res, next) => {
     return next(createHttpError(404, 'Note not found'));
   }
 
-  res.status(204).send();
+  res.status(200).json(note);
 };
