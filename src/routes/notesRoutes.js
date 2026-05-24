@@ -13,15 +13,29 @@ import {
 import {
   createNoteSchema,
   updateNoteSchema,
+  getAllNotesSchema,
+  noteIdSchema,
 } from '../validations/notesValidation.js';
 
 const router = Router();
 
 router.use(authenticate);
 
-router.get('/notes', getAllNotes);
+router.get(
+  '/notes',
+  celebrate({
+    [Segments.QUERY]: getAllNotesSchema,
+  }),
+  getAllNotes,
+);
 
-router.get('/notes/:id', getNoteById);
+router.get(
+  '/notes/:noteId',
+  celebrate({
+    [Segments.PARAMS]: noteIdSchema,
+  }),
+  getNoteById,
+);
 
 router.post(
   '/notes',
@@ -32,13 +46,20 @@ router.post(
 );
 
 router.patch(
-  '/notes/:id',
+  '/notes/:noteId',
   celebrate({
+    [Segments.PARAMS]: noteIdSchema,
     [Segments.BODY]: updateNoteSchema,
   }),
   updateNote,
 );
 
-router.delete('/notes/:id', deleteNote);
+router.delete(
+  '/notes/:noteId',
+  celebrate({
+    [Segments.PARAMS]: noteIdSchema,
+  }),
+  deleteNote,
+);
 
 export default router;
