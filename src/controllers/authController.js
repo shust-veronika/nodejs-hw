@@ -1,5 +1,10 @@
 import bcrypt from 'bcrypt';
 import createHttpError from 'http-errors';
+import jwt from 'jsonwebtoken';
+import fs from 'node:fs/promises';
+import handlebars from 'handlebars';
+
+import { sendEmail } from '../utils/sendMail.js';
 
 import { User } from '../models/user.js';
 import { Session } from '../models/session.js';
@@ -104,4 +109,101 @@ export const logoutUser = async (req, res) => {
   res.clearCookie('refreshToken');
 
   res.status(204).send();
+};
+
+export const requestResetEmail = async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res.status(200).json({
+      message: 'Password reset email sent successfully',
+    });
+  }
+
+  const token = jwt.sign(
+    {
+      sub: user._id,
+      email: user.email,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: '15m',
+    },
+  );
+
+  const source = await fs.readFile(
+    './src/templates/reset-password-email.html',
+    'utf-8',
+  );
+
+  const template = handlebars.compile(source);
+
+  const resetLink = `${process.env.FRONTEND_DOMAIN}/reset-password?token=${token}`;
+
+  const html = template({
+    name: user.username,
+    link: resetLink,
+  });
+
+  try {
+    await sendEmail({
+      to: email,
+      subject: 'Reset password',
+      html,
+    });
+  } catch {
+    throw createHttpError(
+      500,
+      'Failed to send the email, please try again later.',
+    );
+  }
+
+  res.status(200).json({
+    message: 'Password reset email sent successfully',
+  });
+};
+
+export const resetPassword = async (req, res) => {
+  const { token, password } = req.body;
+
+  let payload;
+
+  try {
+    payload = jwt.verify(
+      token,
+      process.env.JWT_SECRET,
+    );
+  } catch {
+    throw createHttpError(
+      401,
+      'Invalid or expired token',
+    );
+  }
+
+  const user = await User.findOne({
+    _id: payload.sub,
+    email: payload.email,
+  });
+
+  if (!user) {
+    throw createHttpError(
+      404,
+      'User not found',
+    );
+  }
+
+  const hashedPassword = await bcrypt.hash(
+    password,
+    10,
+  );
+
+  user.password = hashedPassword;
+
+  await user.save();
+
+  res.status(200).json({
+    message: 'Password reset successfully',
+  });
 };
